@@ -201,7 +201,7 @@ class AFADDataset(Dataset):
 
     def __getitem__(self, index):
         img = Image.open(os.path.join(self.img_dir,
-                                      self.img_paths[index]))
+                                      self.img_paths.iloc[index]))
 
         if self.transform is not None:
             img = self.transform(img)
