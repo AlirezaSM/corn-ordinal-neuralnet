@@ -55,6 +55,7 @@ NUM_EPOCHS = args.epochs
 BATCH_SIZE = args.batchsize
 SKIP_TRAIN_EVAL = args.skip_train_eval
 SAVE_MODELS = args.save_models
+CHECKPOINT_PATH = args.checkpoint
 
 if args.cuda >= 0 and torch.cuda.is_available():
     DEVICE = torch.device(f'cuda:{args.cuda}')
@@ -264,6 +265,9 @@ class ResNet(nn.Module):
 ###########################################
 
 model = ResNet(num_classes=NUM_CLASSES, grayscale=GRAYSCALE)
+if CHECKPOINT_PATH:
+    model.load_state_dict(torch.load(CHECKPOINT_PATH))
+    print(f'Checkpoint loaded with following path: {CHECKPOINT_PATH}')
 
 model.to(DEVICE)
 
@@ -300,41 +304,41 @@ info_dict['training'] = {
          'best running epoch': -1
 }
 
-for epoch in range(1, NUM_EPOCHS+1):
+# for epoch in range(1, NUM_EPOCHS+1):
 
-    model.train()
-    for batch_idx, (features, targets) in enumerate(train_loader):
+#     model.train()
+#     for batch_idx, (features, targets) in enumerate(train_loader):
 
-        features = features.to(DEVICE)
-        targets = targets.to(DEVICE)
+#         features = features.to(DEVICE)
+#         targets = targets.to(DEVICE)
 
-        # FORWARD AND BACK PROP
-        logits, probas = model(features)
+#         # FORWARD AND BACK PROP
+#         logits, probas = model(features)
 
-        # ### Ordinal loss
-        loss = loss_conditional_v2(logits, targets, NUM_CLASSES)
-        # ##--------------------------------------------------------------------###
+#         # ### Ordinal loss
+#         loss = loss_conditional_v2(logits, targets, NUM_CLASSES)
+#         # ##--------------------------------------------------------------------###
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
 
-        # ITERATION LOGGING
-        iteration_logging(info_dict=info_dict, batch_idx=batch_idx,
-                          loss=loss, train_dataset=train_dataset,
-                          frequency=50, epoch=epoch)
+#         # ITERATION LOGGING
+#         iteration_logging(info_dict=info_dict, batch_idx=batch_idx,
+#                           loss=loss, train_dataset=train_dataset,
+#                           frequency=50, epoch=epoch)
 
-    # EPOCH LOGGING
-    # function saves best model as best_model.pt
-    best_mae = epoch_logging(info_dict=info_dict,
-                             model=model, train_loader=train_loader,
-                             valid_loader=valid_loader,
-                             which_model='conditional',
-                             loss=loss, epoch=epoch, start_time=start_time,
-                             skip_train_eval=SKIP_TRAIN_EVAL)
+#     # EPOCH LOGGING
+#     # function saves best model as best_model.pt
+#     best_mae = epoch_logging(info_dict=info_dict,
+#                              model=model, train_loader=train_loader,
+#                              valid_loader=valid_loader,
+#                              which_model='conditional',
+#                              loss=loss, epoch=epoch, start_time=start_time,
+#                              skip_train_eval=SKIP_TRAIN_EVAL)
 
-    if args.scheduler:
-        scheduler.step(info_dict['training']['epoch valid rmse'][-1])
+#     if args.scheduler:
+#         scheduler.step(info_dict['training']['epoch valid rmse'][-1])
 
 
 # ####### AFTER TRAINING EVALUATION
@@ -401,6 +405,6 @@ plot_per_class_mae(info_dict)
 # ######## CLEAN UP ########
 json.dump(info_dict, open(os.path.join(PATH, 'info_dict.json'), 'w'), indent=4)
 
-if not SAVE_MODELS:
-    os.remove(os.path.join(PATH, 'best_model.pt'))
-    os.remove(os.path.join(PATH, 'last_model.pt'))
+# if not SAVE_MODELS:
+#     os.remove(os.path.join(PATH, 'best_model.pt'))
+#     os.remove(os.path.join(PATH, 'last_model.pt'))
