@@ -5,6 +5,8 @@ import numpy as np
 from helper_files.dataset import proba_to_label
 from tqdm import tqdm
 
+np.set_printoptions(precision=4, suppress=True)
+
 
 def compute_mae_and_mse(model, data_loader, device, which_model):
 
@@ -82,10 +84,15 @@ def compute_accuracy(model, data_loader, device, which_model):
     return correct_pred.float()/num_examples * 100
 
 
+import torch
+from sklearn.metrics import confusion_matrix
+
 def compute_accuracy_mae_mse(model, data_loader, device, which_model):
     with torch.no_grad():
-
+        
         correct_pred, mae, mse, num_examples = 0, 0., 0., 0
+        all_predicted_labels = []
+        all_targets = []
 
         for i, (features, targets) in tqdm(enumerate(data_loader)):
 
@@ -112,6 +119,10 @@ def compute_accuracy_mae_mse(model, data_loader, device, which_model):
             else:
                 raise ValueError('invalid which_model choice')
 
+            # Collect predictions and true labels
+            all_predicted_labels.extend(predicted_labels.cpu().numpy())
+            all_targets.extend(targets.cpu().numpy())
+
             num_examples += targets.size(0)
             correct_pred += (predicted_labels == targets).sum()
             mae += torch.sum(torch.abs(predicted_labels - targets))
@@ -119,7 +130,11 @@ def compute_accuracy_mae_mse(model, data_loader, device, which_model):
 
         mae = mae / num_examples
         mse = mse / num_examples
-    return correct_pred.float()/num_examples * 100, mae, mse
+
+        # Compute confusion matrix
+        confusion_mat = confusion_matrix(all_targets, all_predicted_labels)
+
+    return correct_pred.float()/num_examples * 100, mae, mse, confusion_mat
 
 
 def compute_per_class_mae(actual, predicted):
@@ -224,6 +239,21 @@ def epoch_logging(info_dict, model, loss, epoch,
         with open(logfile, 'a') as f:
             f.write(f'{s}\n')
 
+def normalize_confusion_matrix(confusion_matrix):
+    # Convert to numpy array in case input is not a numpy array
+    confusion_matrix = np.array(confusion_matrix, dtype=float)
+
+    # Normalize each row (ground truth) to get probabilities
+    row_sums = confusion_matrix.sum(axis=1, keepdims=True)
+
+    # Avoid division by zero by replacing zero sums with one (for cases with no instances of a class)
+    row_sums[row_sums == 0] = 1
+
+    # Normalize the confusion matrix
+    normalized_conf_matrix = confusion_matrix / row_sums
+    
+    return normalized_conf_matrix
+    
 
 def aftertraining_logging(model, which, info_dict, train_loader,
                           valid_loader, test_loader, which_model,
@@ -248,27 +278,15 @@ def aftertraining_logging(model, which, info_dict, train_loader,
 
     model.eval()
     with torch.no_grad():
-        train_mae, train_mse = compute_mae_and_mse(model, train_loader,
-                                                   device=device,
-                                                   which_model=which_model)
-        valid_mae, valid_mse = compute_mae_and_mse(model, valid_loader,
-                                                   device=device,
-                                                   which_model=which_model)
-        test_mae, test_mse = compute_mae_and_mse(model, test_loader,
-                                                 device=device,
-                                                 which_model=which_model)
-        train_rmse, valid_rmse = torch.sqrt(train_mse), torch.sqrt(valid_mse)
-        test_rmse = torch.sqrt(test_mse)
 
-        train_acc = compute_accuracy(model, train_loader,
-                                     device=device,
-                                     which_model=which_model)
-        valid_acc = compute_accuracy(model, valid_loader,
-                                     device=device,
-                                     which_model=which_model)
-        test_acc = compute_accuracy(model, test_loader,
-                                    device=device,
-                                    which_model=which_model)
+        train_acc, train_mae, train_mse, train_confusion_mat = compute_accuracy_mae_mse(model, train_loader, device, which_model)
+        train_rmse = torch.sqrt(train_mse)
+
+        valid_acc, valid_mae, valid_mse, valid_confusion_mat = compute_accuracy_mae_mse(model, valid_loader, device, which_model)
+        valid_rmse = torch.sqrt(valid_mse)
+
+        test_acc, test_mae, test_mse, test_confusion_mat = compute_accuracy_mae_mse(model, test_loader, device, which_model)
+        test_rmse = torch.sqrt(test_mse)
 
         s = (f'MAE/RMSE: | {log_key}Train: {train_mae:.2f}/{train_rmse:.2f} '
              f'| {log_key}Valid: {valid_mae:.2f}/{valid_rmse:.2f} '
@@ -299,6 +317,16 @@ def aftertraining_logging(model, which, info_dict, train_loader,
         info_dict[info_dict_key]['test mae'] = test_mae.item()
         info_dict[info_dict_key]['test rmse'] = test_rmse.item()
         info_dict[info_dict_key]['test acc'] = test_acc.item()
+
+        with open(os.path.join(path, 'train_confusion_matrix.npy'), 'wb') as file:
+            np.save(file, train_confusion_mat)
+        
+        with open(os.path.join(path, 'valid_confusion_matrix.npy'), 'wb') as file:
+            np.save(file, valid_confusion_mat)
+
+        with open(os.path.join(path, 'test_confusion_matrix.npy'), 'wb') as file:
+            np.save(file, test_confusion_mat)
+
 
 
 def create_logfile(info_dict):
