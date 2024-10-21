@@ -55,7 +55,6 @@ NUM_EPOCHS = args.epochs
 BATCH_SIZE = args.batchsize
 SKIP_TRAIN_EVAL = args.skip_train_eval
 SAVE_MODELS = args.save_models
-CHECKPOINT_PATH = args.checkpoint
 
 if args.cuda >= 0 and torch.cuda.is_available():
     DEVICE = torch.device(f'cuda:{args.cuda}')
@@ -265,9 +264,6 @@ class ResNet(nn.Module):
 ###########################################
 
 model = ResNet(num_classes=NUM_CLASSES, grayscale=GRAYSCALE)
-if CHECKPOINT_PATH:
-    model.load_state_dict(torch.load(CHECKPOINT_PATH))
-    print(f'Checkpoint loaded with following path: {CHECKPOINT_PATH}')
 
 model.to(DEVICE)
 
@@ -304,107 +300,9 @@ info_dict['training'] = {
          'best running epoch': -1
 }
 
-# for epoch in range(1, NUM_EPOCHS+1):
-
-#     model.train()
-#     for batch_idx, (features, targets) in enumerate(train_loader):
-
-#         features = features.to(DEVICE)
-#         targets = targets.to(DEVICE)
-
-#         # FORWARD AND BACK PROP
-#         logits, probas = model(features)
-
-#         # ### Ordinal loss
-#         loss = loss_conditional_v2(logits, targets, NUM_CLASSES)
-#         # ##--------------------------------------------------------------------###
-
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
-
-#         # ITERATION LOGGING
-#         iteration_logging(info_dict=info_dict, batch_idx=batch_idx,
-#                           loss=loss, train_dataset=train_dataset,
-#                           frequency=50, epoch=epoch)
-
-#     # EPOCH LOGGING
-#     # function saves best model as best_model.pt
-#     best_mae = epoch_logging(info_dict=info_dict,
-#                              model=model, train_loader=train_loader,
-#                              valid_loader=valid_loader,
-#                              which_model='conditional',
-#                              loss=loss, epoch=epoch, start_time=start_time,
-#                              skip_train_eval=SKIP_TRAIN_EVAL)
-
-#     if args.scheduler:
-#         scheduler.step(info_dict['training']['epoch valid rmse'][-1])
-
-
-# ####### AFTER TRAINING EVALUATION
-# function saves last model as last_model.pt
-info_dict['last'] = {}
-aftertraining_logging(model=model, which='last', info_dict=info_dict,
-                      train_loader=train_loader,
-                      valid_loader=valid_loader, test_loader=test_loader,
-                      which_model='conditional',
-                      start_time=start_time)
-
 info_dict['best'] = {}
 aftertraining_logging(model=model, which='best', info_dict=info_dict,
                       train_loader=train_loader,
                       valid_loader=valid_loader, test_loader=test_loader,
                       which_model='conditional',
                       start_time=start_time)
-
-# ######### MAKE PLOTS ######
-plot_training_loss(info_dict=info_dict, averaging_iterations=100)
-plot_mae(info_dict=info_dict)
-plot_accuracy(info_dict=info_dict)
-
-# ######### PER-CLASS MAE PLOT #######
-
-train_loader = DataLoader(dataset=train_dataset,
-                          batch_size=BATCH_SIZE,
-                          shuffle=False,
-                          drop_last=False,
-                          num_workers=NUM_WORKERS)
-
-for best_or_last in ('best', 'last'):
-
-    model.load_state_dict(torch.load(
-        os.path.join(info_dict['settings']['output path'], f'{best_or_last}_model.pt')))
-
-    names = {0: 'train',
-             1: 'test'}
-    for i, data_loader in enumerate([train_loader, test_loader]):
-
-        true_labels = get_labels_from_loader(data_loader)
-
-        # ######### SAVE PREDICTIONS ######
-        all_probas, all_predictions = save_predictions(model=model,
-                                                       which=best_or_last,
-                                                       which_model='conditional',
-                                                       info_dict=info_dict,
-                                                       data_loader=data_loader,
-                                                       prefix=names[i])
-
-        errors, counts = compute_per_class_mae(actual=true_labels.numpy(),
-                                               predicted=all_predictions.numpy())
-
-        info_dict[f'per-class mae {names[i]} ({best_or_last} model)'] = errors
-
-        #actual_selfentropy_best, best_selfentropy_best =\
-        #    compute_selfentropy_for_mae(errors_best)
-
-        #info_dict['test set mae self-entropy'] = actual_selfentropy_best.item()
-        #info_dict['ideal test set mae self-entropy'] = best_selfentropy_best.item()
-
-plot_per_class_mae(info_dict)
-
-# ######## CLEAN UP ########
-json.dump(info_dict, open(os.path.join(PATH, 'info_dict.json'), 'w'), indent=4)
-
-# if not SAVE_MODELS:
-#     os.remove(os.path.join(PATH, 'best_model.pt'))
-#     os.remove(os.path.join(PATH, 'last_model.pt'))

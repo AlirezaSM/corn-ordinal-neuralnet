@@ -3,6 +3,7 @@ import time
 import torch
 import numpy as np
 from helper_files.dataset import proba_to_label
+from tqdm import tqdm
 
 
 def compute_mae_and_mse(model, data_loader, device, which_model):
@@ -11,7 +12,7 @@ def compute_mae_and_mse(model, data_loader, device, which_model):
 
         mae, mse, num_examples = 0., 0., 0
 
-        for i, (features, targets) in enumerate(data_loader):
+        for i, (features, targets) in tqdm(enumerate(data_loader)):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -51,7 +52,7 @@ def compute_accuracy(model, data_loader, device, which_model):
 
         correct_pred, num_examples = 0, 0
 
-        for i, (features, targets) in enumerate(data_loader):
+        for i, (features, targets) in tqdm(enumerate(data_loader)):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -86,7 +87,7 @@ def compute_accuracy_mae_mse(model, data_loader, device, which_model):
 
         correct_pred, mae, mse, num_examples = 0, 0., 0., 0
 
-        for i, (features, targets) in enumerate(data_loader):
+        for i, (features, targets) in tqdm(enumerate(data_loader)):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -238,7 +239,7 @@ def aftertraining_logging(model, which, info_dict, train_loader,
         log_key = ''
 
     elif which == 'best':
-        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
+        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt'), weights_only=True))
         info_dict_key = 'best'
         log_key = 'Best '
 

@@ -81,9 +81,6 @@ def parse_cmdline_args(parser=None):
                         type=str,
                         choices=['true', 'false'],
                         default='false')
-    
-    parser.add_argument('checkpoint',
-                        type=str)
 
     parser.set_defaults(feature=True)
     args = parser.parse_args()
