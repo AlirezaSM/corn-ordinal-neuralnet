@@ -247,16 +247,16 @@ class ResNet(nn.Module):
     def __init__(self, num_classes, grayscale):
         super(ResNet, self).__init__()
         self.num_classes = num_classes
-        if grayscale:
-            in_dim = 1
-        else:
-            in_dim = 3
+        in_dim = 1 if grayscale else 3  # Adjust input dimension for grayscale or RGB
         self.resnet = models.resnet34(pretrained=True)
-        in_features = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(in_features, num_classes - 1)
+        in_features = self.resnet.fc.in_features  # Get input features for fully connected layer
+        self.resnet.fc = nn.Linear(in_features, num_classes - 1)  # Adjust output layer size
 
     def forward(self, x):
-        return self.resnet(x)
+        logits = self.resnet(x)  # Get logits from ResNet
+        probas = torch.sigmoid(logits)  # Convert logits to probabilities using sigmoid
+        return logits, probas  # Return both logits and probabilities
+
 
 
 ###########################################
