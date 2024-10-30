@@ -331,7 +331,7 @@ for epoch in range(1, NUM_EPOCHS+1):
     best_mae = epoch_logging(info_dict=info_dict,
                              model=model, train_loader=train_loader,
                              valid_loader=valid_loader,
-                             which_model='conditional',
+                             which_model='categorical',
                              loss=loss, epoch=epoch, start_time=start_time,
                              skip_train_eval=SKIP_TRAIN_EVAL)
 
@@ -345,14 +345,14 @@ info_dict['last'] = {}
 aftertraining_logging(model=model, which='last', info_dict=info_dict,
                       train_loader=train_loader,
                       valid_loader=valid_loader, test_loader=test_loader,
-                      which_model='conditional',
+                      which_model='categorical',
                       start_time=start_time)
 
 info_dict['best'] = {}
 aftertraining_logging(model=model, which='best', info_dict=info_dict,
                       train_loader=train_loader,
                       valid_loader=valid_loader, test_loader=test_loader,
-                      which_model='conditional',
+                      which_model='categorical',
                       start_time=start_time)
 
 # ######### MAKE PLOTS ######
@@ -382,7 +382,7 @@ for best_or_last in ('best', 'last'):
         # ######### SAVE PREDICTIONS ######
         all_probas, all_predictions = save_predictions(model=model,
                                                        which=best_or_last,
-                                                       which_model='conditional',
+                                                       which_model='categorical',
                                                        info_dict=info_dict,
                                                        data_loader=data_loader,
                                                        prefix=names[i])
