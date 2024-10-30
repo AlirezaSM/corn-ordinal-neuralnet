@@ -238,7 +238,7 @@ def aftertraining_logging(model, which, info_dict, train_loader,
         log_key = ''
 
     elif which == 'best':
-        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt', weights_only=True)))
+        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt'), weights_only=True))
         info_dict_key = 'best'
         log_key = 'Best '
 
