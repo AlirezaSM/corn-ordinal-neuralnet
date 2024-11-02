@@ -313,7 +313,7 @@ for epoch in range(1, NUM_EPOCHS+1):
         logits, probas = model(features)
 
         # ### Ordinal loss
-        loss = criterion(probas, targets)
+        loss = criterion(probas, targets.view(-1, 1))
         # ##--------------------------------------------------------------------###
 
         optimizer.zero_grad()
