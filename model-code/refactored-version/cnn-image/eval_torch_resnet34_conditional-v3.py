@@ -27,10 +27,10 @@ from torch.utils.data import SubsetRandomSampler
 
 # ### from local .py files
 
-from helper_files.trainingeval import (iteration_logging, epoch_logging,
+from helper_files.eval import (iteration_logging, epoch_logging,
                           aftertraining_logging, save_predictions,
                           create_logfile)
-from helper_files.trainingeval import compute_per_class_mae, compute_selfentropy_for_mae
+from helper_files.eval import compute_per_class_mae, compute_selfentropy_for_mae
 from helper_files.resnet34 import BasicBlock
 from helper_files.dataset import levels_from_labelbatch
 from helper_files.losses import loss_conditional_v2
