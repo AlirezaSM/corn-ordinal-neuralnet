@@ -39,6 +39,7 @@ from helper_files.plotting import plot_training_loss, plot_mae, plot_accuracy
 from helper_files.plotting import plot_per_class_mae
 from helper_files.dataset import get_labels_from_loader
 from helper_files.parser import parse_cmdline_args
+from helper_files.dataset import proba_to_label
 
 
 # Argparse helper
@@ -319,14 +320,38 @@ for epoch in range(1, NUM_EPOCHS+1):
 
         # ### Entropy term ###
         # Calculate the entropy of the batch predictions
-        # Ensure probas are clipped to avoid log(0) and ensure valid probabilities
-        probas_clipped = torch.clamp(probas, min=1e-8, max=1.0)
-        batch_entropy = -torch.sum(probas_clipped * torch.log(probas_clipped), dim=1).mean()
+        # # Ensure probas are clipped to avoid log(0) and ensure valid probabilities
+        # probas_clipped = torch.clamp(torch.cumprod(probas, dim=1), min=1e-8, max=1.0)
+        # predicted_labels = proba_to_label(probas_clipped).float()
+        # batch_entropy = -torch.sum(predicted_labels * torch.log(predicted_labels)).mean()
+
+
+
+
+        predicted_labels = proba_to_label(torch.cumprod(probas, dim=1)).to(DEVICE)  # Assuming proba_to_label outputs class labels
+        # print('predicted_labels', predicted_labels.size(), predicted_labels)
+
+        # Calculate the distribution of class labels in the batch
+        # print('num_classes', NUM_CLASSES)
+        label_counts = torch.bincount(predicted_labels, minlength=NUM_CLASSES).float()
+        # print('label_counts', label_counts)
+        label_distribution = label_counts / label_counts.sum()  # Normalize to get probabilities
+        # Clip to avoid log(0) issues
+        label_distribution = torch.clamp(label_distribution, min=1e-8)
+        # print('label_distribution', label_distribution)
+        
+        # Calculate entropy of the predicted class labels
+        batch_entropy = -torch.sum(label_distribution * torch.log(label_distribution))
+
         
         # Add the weighted entropy term to the loss
-        loss += entropy_weight * batch_entropy
+        
+        # print(f'Before loss = {loss}')
+        # print(f'Entropy = {batch_entropy}')
+        # print(f'Zarib = {(1 + entropy_weight * (torch.log(torch.tensor(NUM_CLASSES)) - batch_entropy))}')
+        loss = loss * (1 + entropy_weight * (torch.log(torch.tensor(NUM_CLASSES)) - batch_entropy))
         # ##--------------------------------------------------------------------###
-
+        # print(f'After loss = {loss}\n')
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
