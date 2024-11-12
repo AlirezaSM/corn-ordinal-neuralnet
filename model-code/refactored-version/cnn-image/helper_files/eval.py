@@ -3,6 +3,7 @@ import time
 import torch
 import numpy as np
 from helper_files.dataset import proba_to_label
+from sklearn.metrics import confusion_matrix
 from tqdm import tqdm
 
 np.set_printoptions(precision=4, suppress=True)
@@ -14,7 +15,7 @@ def compute_mae_and_mse(model, data_loader, device, which_model):
 
         mae, mse, num_examples = 0., 0., 0
 
-        for i, (features, targets) in tqdm(enumerate(data_loader)):
+        for i, (features, targets) in enumerate(data_loader):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -35,7 +36,7 @@ def compute_mae_and_mse(model, data_loader, device, which_model):
             elif which_model == 'categorical':
                 _, predicted_labels = torch.max(probas, 1)
             elif which_model == 'metric':
-                predicted_labels = torch.round(logits).long()
+                predicted_labels = torch.round(logits).long().view(-1)
             else:
                 raise ValueError('Invalid which_model choice')
 
@@ -54,7 +55,7 @@ def compute_accuracy(model, data_loader, device, which_model):
 
         correct_pred, num_examples = 0, 0
 
-        for i, (features, targets) in tqdm(enumerate(data_loader)):
+        for i, (features, targets) in enumerate(data_loader):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -75,7 +76,7 @@ def compute_accuracy(model, data_loader, device, which_model):
             elif which_model == 'categorical':
                 _, predicted_labels = torch.max(probas, 1)
             elif which_model == 'metric':
-                predicted_labels = torch.round(logits).long()
+                predicted_labels = torch.round(logits).long().view(-1)
             else:
                 raise ValueError('invalid which_model choice')
 
@@ -90,7 +91,7 @@ def compute_accuracy_mae_mse(model, data_loader, device, which_model):
         all_predicted_labels = []
         all_targets = []
 
-        for i, (features, targets) in tqdm(enumerate(data_loader)):
+        for i, (features, targets) in enumerate(data_loader):
 
             features = features.to(device)
             targets = targets.float().to(device)
@@ -111,7 +112,7 @@ def compute_accuracy_mae_mse(model, data_loader, device, which_model):
             elif which_model == 'categorical':
                 _, predicted_labels = torch.max(probas, 1)
             elif which_model == 'metric':
-                predicted_labels = torch.round(logits).long()
+                predicted_labels = torch.round(logits).long().view(-1)
             else:
                 raise ValueError('invalid which_model choice')
 
