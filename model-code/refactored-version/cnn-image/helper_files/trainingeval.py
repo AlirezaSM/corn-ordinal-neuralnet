@@ -238,7 +238,7 @@ def aftertraining_logging(model, which, info_dict, train_loader,
         log_key = ''
 
     elif which == 'best':
-        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt'), weights_only=True))
+        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
         info_dict_key = 'best'
         log_key = 'Best '
 
@@ -326,10 +326,10 @@ def save_predictions(model, which, which_model, info_dict, data_loader, prefix='
     path = info_dict['settings']['output path']
 
     if which == 'last':
-        model.load_state_dict(torch.load(os.path.join(path, 'last_model.pt'), weights_only=True))
+        model.load_state_dict(torch.load(os.path.join(path, 'last_model.pt')))
 
     elif which == 'best':
-        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt'), weights_only=True))
+        model.load_state_dict(torch.load(os.path.join(path, 'best_model.pt')))
 
     else:
         raise ValueError('`which` must be "last" or "best"')
