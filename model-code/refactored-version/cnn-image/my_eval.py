@@ -27,10 +27,10 @@ from torch.utils.data import SubsetRandomSampler
 
 # ### from local .py files
 
-from helper_files.eval import (iteration_logging, epoch_logging,
+from helper_files.my_eval import (iteration_logging, epoch_logging,
                           aftertraining_logging, save_predictions,
                           create_logfile)
-from helper_files.eval import compute_per_class_mae, compute_selfentropy_for_mae
+from helper_files.my_eval import compute_per_class_mae, compute_selfentropy_for_mae
 from helper_files.resnet34 import BasicBlock
 from helper_files.dataset import levels_from_labelbatch
 from helper_files.losses import loss_conditional_v2
@@ -50,23 +50,15 @@ args = parse_cmdline_args(parser)
 ##########################
 
 NUM_WORKERS = args.numworkers
-LEARNING_RATE = args.learningrate
-NUM_EPOCHS = args.epochs
 BATCH_SIZE = args.batchsize
-SKIP_TRAIN_EVAL = args.skip_train_eval
-SAVE_MODELS = args.save_models
 
 if args.cuda >= 0 and torch.cuda.is_available():
     DEVICE = torch.device(f'cuda:{args.cuda}')
 else:
     DEVICE = torch.device('cpu')
 
-if args.seed == -1:
-    RANDOM_SEED = None
-else:
-    RANDOM_SEED = args.seed
-
 PATH = args.outpath
+
 if not os.path.exists(PATH):
     os.mkdir(PATH)
 
@@ -82,20 +74,12 @@ info_dict = {
         'pytorch version': torch.__version__,
         'cuda device': str(cuda_device),
         'cuda version': cuda_version,
-        'random seed': RANDOM_SEED,
-        'learning rate': LEARNING_RATE,
-        'num epochs': NUM_EPOCHS,
-        'batch size': BATCH_SIZE,
         'output path': PATH,
-        'training logfile': os.path.join(PATH, 'training.log')}
+        'batch size': BATCH_SIZE,
+        'evaluation logfile': os.path.join(PATH, 'eval.log')}
 }
 
 create_logfile(info_dict)
-
-# Deterministic CUDA & cuDNN behavior and random seeds
-#set_deterministic()
-set_all_seeds(RANDOM_SEED)
-
 
 ###################
 # Dataset
