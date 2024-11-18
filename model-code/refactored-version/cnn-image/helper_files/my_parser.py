@@ -92,6 +92,10 @@ def parse_cmdline_args(parser=None):
                         choices=['true', 'false'],
                         default='false')
 
+    parser.add_argument('--weight_decay',
+                        type=float,
+                        default=0.0)
+
     parser.set_defaults(feature=True)
     args = parser.parse_args()
 

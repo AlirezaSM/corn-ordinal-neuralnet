@@ -3,7 +3,9 @@ import os
 import sys
 import json
 import time
+# import wandb
 import torch
+torch.multiprocessing.set_sharing_strategy('file_system')
 import argparse
 import torchvision
 import numpy as np
@@ -75,6 +77,7 @@ info_dict = {
         'optimizer': args.optimizer,
         'scheduler': args.scheduler,
         'dataset': args.dataset,
+        'weight decay': args.weight_decay,
         # 'dataset img path': args.dataset_img_path,
         # 'dataset train csv path': args.dataset_train_csv_path,
         # 'dataset valid csv path': args.dataset_valid_csv_path,
@@ -260,10 +263,10 @@ class ResNet(nn.Module):
         logits = self.resnet(x)  # Get logits from ResNet
         if args.loss == 'conditional':
             probas = torch.sigmoid(logits)  # Convert logits to probabilities using sigmoid
-        elif args.loss == 'crossentropy':
-            probas = nn.functional.softmax(logits)
+        # elif args.loss == 'crossentropy':
+            # probas = nn.functional.softmax(logits, dim=1)
         
-        if args.loss == 'mae':
+        if args.loss == 'mae' or args.loss == 'crossentropy':
             return logits, logits
         else:
             return logits, probas
@@ -278,10 +281,14 @@ model = ResNet(num_classes=NUM_CLASSES, grayscale=GRAYSCALE)
 model.to(DEVICE)
 
 if args.optimizer == 'adam':
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learningrate)
+    optimizer = torch.optim.Adam(model.parameters(),
+                                lr=args.learningrate,
+                                weight_decay= args.weight_decay if args.weight_decay else 0.0)
 elif args.optimizer == 'sgd':
-    optimizer = torch.optim.SGD(model.parameters(), lr=args.learningrate,
-                                momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(),
+                                lr=args.learningrate,
+                                momentum=0.9,
+                                weight_decay= args.weight_decay if args.weight_decay else 0.0)
 else:
     raise ValueError('--optimizer must be "adam" or "sgd"')
 
@@ -298,6 +305,23 @@ if args.scheduler:
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min',
                                                            verbose=True)
 
+# wandb.init(
+#     project=os.path.basename(args.outpath),
+#     config={
+#         "model": args.model,
+#         "loss_function": args.loss,
+#         "seed": RANDOM_SEED,
+#         "epochs": args.epochs,
+#         "batch_size": args.batchsize,
+#         "num_workers": args.numworkers,
+#         "optimizer": args.optimizer,
+#         "scheduler": args.scheduler,
+#         "scheduler_type": type(scheduler).__name__ if args.scheduler else None,
+#         "learning_rate": args.learningrate,
+#         "dataset": args.dataset
+#     },
+# )
+# wandb.watch(model, log='all', log_freq=10)
 
 start_time = time.time()
 
@@ -377,6 +401,7 @@ aftertraining_logging(model=model, which='last', info_dict=info_dict,
                       train_loader=train_loader,
                       valid_loader=valid_loader, test_loader=test_loader,
                       which_model=which_model_map[args.loss],
+                      NUM_CLASSES=NUM_CLASSES,
                       start_time=start_time)
 
 info_dict['best'] = {}
@@ -384,6 +409,7 @@ aftertraining_logging(model=model, which='best', info_dict=info_dict,
                       train_loader=train_loader,
                       valid_loader=valid_loader, test_loader=test_loader,
                       which_model=which_model_map[args.loss],
+                      NUM_CLASSES=NUM_CLASSES,
                       start_time=start_time)
 
 # ######### MAKE PLOTS ######

@@ -19,10 +19,10 @@ MORPH2_BALANCED_INFO = {
     'CLASS_COLUMN': 'age'}
 
 AFAD_BALANCED_INFO = {
-    'TRAIN_CSV_PATH': '/content/corn-ordinal-neuralnet/datasets/afad/afad_train_balanced.csv',
-    'TEST_CSV_PATH': '/content/corn-ordinal-neuralnet/datasets/afad/afad_test_balanced.csv',
-    'VALID_CSV_PATH': '/content/corn-ordinal-neuralnet/datasets/afad/afad_valid_balanced.csv',
-    'IMAGE_PATH': '/content/AFAD-Full',
+    'TRAIN_CSV_PATH': 'corn-ordinal-neuralnet/datasets/afad/afad_train_balanced.csv',
+    'TEST_CSV_PATH': 'corn-ordinal-neuralnet/datasets/afad/afad_test_balanced.csv',
+    'VALID_CSV_PATH': 'corn-ordinal-neuralnet/datasets/afad/afad_valid_balanced.csv',
+    'IMAGE_PATH': 'AFAD-Full',
     'CLASS_COLUMN': 'age'}
 
 AES_INFO = {

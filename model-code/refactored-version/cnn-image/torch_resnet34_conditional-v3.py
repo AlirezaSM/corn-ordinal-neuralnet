@@ -21,6 +21,7 @@ import sys
 import numpy as np
 import torchvision.models as models
 
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.utils.data import SubsetRandomSampler
 
@@ -291,35 +292,42 @@ info_dict['training'] = {
          'epoch train mae': [],
          'epoch train rmse': [],
          'epoch train acc': [],
+         'epoch train loss': [],
          'epoch valid mae': [],
          'epoch valid rmse': [],
          'epoch valid acc': [],
-         'best running mae': np.infty,
-         'best running rmse': np.infty,
+         'epoch valid loss': [],
+         'best running mae': np.inf,
+         'best running rmse': np.inf,
          'best running acc': 0.,
+         'best running loss': np.inf,
          'best running epoch': -1
 }
 
-for epoch in range(1, NUM_EPOCHS+1):
+for epoch in range(1, NUM_EPOCHS + 1):
 
     model.train()
-    for batch_idx, (features, targets) in enumerate(train_loader):
+    # Initialize tqdm progress bar with only one instance
+    train_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{NUM_EPOCHS}", position=0, leave=True)
+    
+    for batch_idx, (features, targets) in enumerate(train_bar):
 
         features = features.to(DEVICE)
         targets = targets.to(DEVICE)
 
         # FORWARD AND BACK PROP
         logits, probas = model(features)
-
-        # ### Ordinal loss
         loss = loss_conditional_v2(logits, targets, NUM_CLASSES)
-        # ##--------------------------------------------------------------------###
-
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        # ITERATION LOGGING
+        # Update the tqdm progress bar in place with the current loss
+        if batch_idx % 10 == 0:
+            train_bar.set_postfix({"loss": f'{loss.item():.4f}'})
+
+        # ITERATION LOGGING (if needed)
         iteration_logging(info_dict=info_dict, batch_idx=batch_idx,
                           loss=loss, train_dataset=train_dataset,
                           frequency=50, epoch=epoch)
@@ -330,7 +338,8 @@ for epoch in range(1, NUM_EPOCHS+1):
                              model=model, train_loader=train_loader,
                              valid_loader=valid_loader,
                              which_model='conditional',
-                             loss=loss, epoch=epoch, start_time=start_time,
+                             epoch=epoch, start_time=start_time,
+                             NUM_CLASSES=NUM_CLASSES,
                              skip_train_eval=SKIP_TRAIN_EVAL)
 
     if args.scheduler:
@@ -369,7 +378,8 @@ train_loader = DataLoader(dataset=train_dataset,
 for best_or_last in ('best', 'last'):
 
     model.load_state_dict(torch.load(
-        os.path.join(info_dict['settings']['output path'], f'{best_or_last}_model.pt')))
+        os.path.join(info_dict['settings']['output path'], f'{best_or_last}_model.pt'),
+        weights_only=True))
 
     names = {0: 'train',
              1: 'test'}

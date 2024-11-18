@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+# import wandb
 import numpy as np
 import torch.nn as nn
 from helper_files.dataset import proba_to_label
@@ -256,11 +257,30 @@ def epoch_logging(info_dict, model, epoch,
         print(s)
         with open(logfile, 'a') as f:
             f.write(f'{s}\n')
+        
+        # wandb.log({
+        #     "epoch": epoch,
+        #     "train_mae": train_mae,
+        #     "train_rmse": train_rmse,
+        #     "train_acc": train_acc,
+        #     "train_loss": train_loss,
+        #     "valid_mae": valid_mae,
+        #     "valid_rmse": valid_rmse,
+        #     "valid_acc": valid_acc,
+        #     "valid_loss": valid_loss,
+        #     "best_valid_mae": info_dict["training"]["best running mae"],
+        #     "best_valid_rmse": info_dict["training"]["best running rmse"],
+        #     "best_valid_acc": info_dict["training"]["best running acc"],
+        #     "best_valid_loss": info_dict["training"]["best running loss"],
+        #     "best_valid_epoch": info_dict["training"]["best running epoch"],
+        #     "elapsed_time": (time.time() - start_time) / 60
+        # })
+
 
 
 def aftertraining_logging(model, which, info_dict, train_loader,
                           valid_loader, test_loader, which_model,
-                          start_time=None):
+                          NUM_CLASSES, start_time=None):
 
     device = info_dict['settings']['cuda device']
     path = info_dict['settings']['output path']
@@ -281,41 +301,60 @@ def aftertraining_logging(model, which, info_dict, train_loader,
 
     model.eval()
     with torch.no_grad():
-        train_mae, train_mse = compute_mae_and_mse(model, train_loader,
-                                                   device=device,
-                                                   which_model=which_model)
-        valid_mae, valid_mse = compute_mae_and_mse(model, valid_loader,
-                                                   device=device,
-                                                   which_model=which_model)
-        test_mae, test_mse = compute_mae_and_mse(model, test_loader,
-                                                 device=device,
-                                                 which_model=which_model)
-        train_rmse, valid_rmse = torch.sqrt(train_mse), torch.sqrt(valid_mse)
-        test_rmse = torch.sqrt(test_mse)
+        train_acc, train_mae, train_mse, train_loss = compute_accuracy_mae_mse(model,
+                                                                               train_loader,
+                                                                               device=device,
+                                                                               which_model=which_model,
+                                                                               NUM_CLASSES=NUM_CLASSES)
+        valid_acc, valid_mae, valid_mse, valid_loss = compute_accuracy_mae_mse(model,
+                                                                               valid_loader,
+                                                                               device=device,
+                                                                               which_model=which_model,
+                                                                               NUM_CLASSES=NUM_CLASSES)
+        test_acc, test_mae, test_mse, test_loss = compute_accuracy_mae_mse(model,
+                                                                               test_loader,
+                                                                               device=device,
+                                                                               which_model=which_model,
+                                                                               NUM_CLASSES=NUM_CLASSES)
 
-        train_acc = compute_accuracy(model, train_loader,
-                                     device=device,
-                                     which_model=which_model)
-        valid_acc = compute_accuracy(model, valid_loader,
-                                     device=device,
-                                     which_model=which_model)
-        test_acc = compute_accuracy(model, test_loader,
-                                    device=device,
-                                    which_model=which_model)
+        
+        train_rmse, valid_rmse, test_rmse = torch.sqrt(train_mse), torch.sqrt(valid_mse), torch.sqrt(test_mse)
+        
+        # train_mae, train_mse = compute_mae_and_mse(model, train_loader,
+        #                                            device=device,
+        #                                            which_model=which_model)
+        # valid_mae, valid_mse = compute_mae_and_mse(model, valid_loader,
+        #                                            device=device,
+        #                                            which_model=which_model)
+        # test_mae, test_mse = compute_mae_and_mse(model, test_loader,
+        #                                          device=device,
+        #                                          which_model=which_model)
+        # train_rmse, valid_rmse = torch.sqrt(train_mse), torch.sqrt(valid_mse)
+        # test_rmse = torch.sqrt(test_mse)
 
-        s = (f'MAE/RMSE: | {log_key}Train: {train_mae:.2f}/{train_rmse:.2f} '
-             f'| {log_key}Valid: {valid_mae:.2f}/{valid_rmse:.2f} '
-             f'| {log_key}Test: {test_mae:.2f}/{test_rmse:.2f}')
+        # train_acc = compute_accuracy(model, train_loader,
+        #                              device=device,
+        #                              which_model=which_model)
+        # valid_acc = compute_accuracy(model, valid_loader,
+        #                              device=device,
+        #                              which_model=which_model)
+        # test_acc = compute_accuracy(model, test_loader,
+        #                             device=device,
+        #                             which_model=which_model)
+
+        s = (f'MAE/RMSE/ACC/Loss: | {log_key}Train: {train_mae:.2f}/{train_rmse:.2f}/{train_acc:.2f}/{train_loss:.2f} '
+             f'| {log_key}Valid: {valid_mae:.2f}/{valid_rmse:.2f}/{valid_acc:.2f}/{valid_loss:.2f} '
+             f'| {log_key}Test: {test_mae:.2f}/{test_rmse:.2f}/{test_acc:.2f}/{test_loss:.2f}')
         print(s)
         with open(logfile, 'a') as f:
             f.write(f'{s}\n')
 
-        s = (f'ACC: | {log_key}Train: {train_acc:.2f} '
-             f'| {log_key}Valid: {valid_acc:.2f} '
-             f'| {log_key}Test: {test_acc:.2f}')
-        print(s)
-        with open(logfile, 'a') as f:
-            f.write(f'{s}\n')
+        # s = (f'ACC: | {log_key}Train: {train_acc:.2f} '
+        #      f'| {log_key}Valid: {valid_acc:.2f} '
+        #      f'| {log_key}Test: {test_acc:.2f}')
+        # print(s)
+        # with open(logfile, 'a') as f:
+        #     f.write(f'{s}\n')
 
         if start_time is not None:
             s = f'Total Running Time: {(time.time() - start_time)/60:.2f} min'
@@ -332,6 +371,23 @@ def aftertraining_logging(model, which, info_dict, train_loader,
         info_dict[info_dict_key]['test mae'] = test_mae.item()
         info_dict[info_dict_key]['test rmse'] = test_rmse.item()
         info_dict[info_dict_key]['test acc'] = test_acc.item()
+
+        # wandb.log({
+        #     "{which}_train_mae": train_mae.item(),
+        #     "{which}_train_rmse": train_rmse.item(),
+        #     "{which}_train_acc": train_acc.item(),
+        #     "{which}_train_loss": train_loss.item(),
+        #     "{which}_valid_mae": valid_mae.item(),
+        #     "{which}_valid_rmse": valid_rmse.item(),
+        #     "{which}_valid_acc": valid_acc.item(),
+        #     "{which}_valid_loss": valid_loss.item(),
+        #     "{which}_test_mae": test_mae.item(),
+        #     "{which}_test_rmse": test_rmse.item(),
+        #     "{which}_test_acc": test_acc.item(),
+        #     "{which}_test_loss": test_loss.item(),
+        #     "best_epoch": info_dict['training']['best running epoch'],
+        # })
+
 
 
 def create_logfile(info_dict):
@@ -357,6 +413,7 @@ def create_logfile(info_dict):
     # header.append(f'Dataset valid csv path: {info_dict["settings"]["dataset valid csv path"]}')
     # header.append(f'Dataset test csv path: {info_dict["settings"]["dataset test csv path"]}')
     header.append(f'Skip train eval: {info_dict["settings"]["skip train eval"]}')
+    header.append(f'Weight Decay: {info_dict["settings"]["weight decay"]}')
 
     with open(info_dict["settings"]["training logfile"], 'w') as f:
         for entry in header:
